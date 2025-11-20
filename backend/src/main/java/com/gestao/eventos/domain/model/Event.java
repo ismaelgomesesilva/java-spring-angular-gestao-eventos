@@ -23,6 +23,26 @@ public class Event {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }
+
+    /**
+     * Factory method para criar um novo evento.
+     * 
+     * @param title Título do evento (obrigatório, máximo 100 caracteres)
+     * @param description Descrição do evento (máximo 1000 caracteres)
+     * @param eventAt Data e hora do evento (obrigatório, não pode ser no passado)
+     * @param location Local do evento (máximo 200 caracteres)
+     * @return Nova instância de Event
+     * @throws IllegalArgumentException se os dados forem inválidos
+     */
+    public static Event create(String title, String description, LocalDateTime eventAt, String location) {
+        Event event = new Event();
+        event.setTitle(title);
+        event.setDescription(description);
+        event.setEventAt(eventAt);
+        event.setLocation(location);
+        return event;
+    }
+
     
     /**
      * Atualiza os dados do evento.
@@ -36,7 +56,7 @@ public class Event {
     }
     
     /**
-     * Marca o evento como deletado (soft delete).
+     * Soft delete.
      */
     public void markAsDeleted() {
         this.deleted = true;
