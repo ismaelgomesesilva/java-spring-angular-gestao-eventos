@@ -43,6 +43,22 @@ public class Event {
         return event;
     }
 
+    /**
+     * Factory method para reconstruir um evento existente (usado pelo repositório).
+     */
+    public static Event reconstruct(Long id, String title, String description, LocalDateTime eventAt, 
+        String location, boolean deleted, LocalDateTime createdAt, LocalDateTime updatedAt) {
+        Event event = new Event();
+        event.id = id;
+        event.title = title;
+        event.description = description;
+        event.eventAt = eventAt;
+        event.location = location;
+        event.deleted = deleted;
+        event.createdAt = createdAt;
+        event.updatedAt = updatedAt;
+        return event;
+    }
     
     /**
      * Atualiza os dados do evento.
