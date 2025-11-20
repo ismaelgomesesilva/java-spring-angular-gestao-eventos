@@ -1,0 +1,94 @@
+###############
+# Java / Maven
+###############
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.log
+*.pid
+hs_err_pid*
+replay_pid*
+
+###############
+# Spring Boot
+###############
+*.db
+*.h2.db
+*.mv.db
+*.trace.db
+application-local.properties
+application-local.yml
+application-test.properties
+application-test.yml
+
+###############
+# IntelliJ IDEA
+###############
+.idea/
+*.iws
+*.ipr
+*.iml
+out/
+
+###############
+# VSCode
+###############
+.vscode/
+history/
+code-workspace
+
+###############
+# Node / Angular
+###############
+node_modules/
+dist/
+tmp/
+temp/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+.angular/
+.angular-cache/
+.cache/
+
+###############
+# Environment
+###############
+.env
+.env.*
+!.env.example
+
+###############
+# OS files
+###############
+.DS_Store
+Thumbs.db
+
+###############
+# Docker
+###############
+docker-data/
+*.tar
+
+###############
+# Logs
+###############
+logs/
+*.log
+
+###############
+# Compiled static files
+###############
+*.min.js
+*.min.css
+
+###############
+# Others
+###############
+.sass-cache/
+.cache-loader/
+coverage/
