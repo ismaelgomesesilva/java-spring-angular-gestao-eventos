@@ -1,6 +1,10 @@
 package com.gestao.eventos.adapters.outbound.persistence;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
@@ -25,7 +29,7 @@ public class EventEntity {
     @Column(length = 1000)
     private String description;
 
-    @Column(nullable = false)
+    @Column(name = "event_at", nullable = false)
     private LocalDateTime eventAt;
 
     @Column(length = 200)
@@ -34,10 +38,10 @@ public class EventEntity {
     @Column(nullable = false)
     private Boolean deleted = false;
 
-    @Column(nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
+    @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
     @PrePersist
