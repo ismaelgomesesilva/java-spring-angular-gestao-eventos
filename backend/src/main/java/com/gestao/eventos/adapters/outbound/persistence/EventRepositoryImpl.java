@@ -56,7 +56,7 @@ public class EventRepositoryImpl implements EventRepository {
             entity.setDescription(event.getDescription());
             entity.setEventAt(event.getEventAt());
             entity.setLocation(event.getLocation());
-            entity.setDeleted(event.isDeleted());
+            entity.setDeleted(Boolean.valueOf(event.isDeleted()));
             return entity;
         } else {
             // Evento existente - busca do banco para preservar timestamps
@@ -67,7 +67,7 @@ public class EventRepositoryImpl implements EventRepository {
             entity.setDescription(event.getDescription());
             entity.setEventAt(event.getEventAt());
             entity.setLocation(event.getLocation());
-            entity.setDeleted(event.isDeleted());
+            entity.setDeleted(Boolean.valueOf(event.isDeleted()));
             return entity;
         }
     }
@@ -82,7 +82,7 @@ public class EventRepositoryImpl implements EventRepository {
                 entity.getDescription(),
                 entity.getEventAt(),
                 entity.getLocation(),
-                entity.getDeleted(),
+                entity.getDeleted() != null && entity.getDeleted(),
                 entity.getCreatedAt(),
                 entity.getUpdatedAt()
         );
