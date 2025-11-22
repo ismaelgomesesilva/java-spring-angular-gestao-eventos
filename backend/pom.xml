@@ -111,6 +111,9 @@
                         <include>**/*Test.java</include>
                         <include>**/*Tests.java</include>
                     </includes>
+                    <excludes>
+                        <exclude>**/*IntegrationTest.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <!-- Maven Failsafe Plugin - para testes de integração -->
@@ -133,7 +136,16 @@
                     </execution>
                 </executions>
             </plugin>
+            <!-- Maven Clean Plugin - configuração para evitar erros de limpeza -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.2</version>
+                <configuration>
+                    <followSymlinks>false</followSymlinks>
+                    <failOnError>false</failOnError>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
 </project>
-
