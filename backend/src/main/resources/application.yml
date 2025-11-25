@@ -39,4 +39,12 @@ springdoc:
     path: /api-docs
   swagger-ui:
     path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    doc-expansion: none
+  info:
+    title: Gestão de Eventos API
+    version: 1.0.0
+    description: API RESTful para gerenciamento de eventos
 

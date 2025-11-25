@@ -1,0 +1,25 @@
+import { NgModule } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { ReactiveFormsModule, FormsModule } from '@angular/forms';
+
+/**
+ * Shared Module
+ * 
+ * Módulo compartilhado que contém componentes, diretivas e pipes reutilizáveis.
+ * Pode ser importado em qualquer módulo de feature.
+ */
+@NgModule({
+  declarations: [],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule
+  ],
+  exports: [
+    CommonModule,
+    ReactiveFormsModule,
+    FormsModule
+  ]
+})
+export class SharedModule { }
+
