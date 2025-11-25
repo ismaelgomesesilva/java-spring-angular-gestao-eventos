@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { EventsService } from '../../services/events.service';
 
@@ -25,7 +25,10 @@ import { EventsService } from '../../services/events.service';
             class="form-control"
             [class.error]="eventForm.get('title')?.invalid && eventForm.get('title')?.touched">
           <div *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched" class="error-message">
-            Título é obrigatório (máximo 100 caracteres)
+            <span *ngIf="eventForm.get('title')?.errors?.['required']">Título é obrigatório</span>
+            <span *ngIf="eventForm.get('title')?.errors?.['maxlength']">
+              Título não pode ter mais de 100 caracteres
+            </span>
           </div>
         </div>
         
@@ -52,7 +55,10 @@ import { EventsService } from '../../services/events.service';
             class="form-control"
             [class.error]="eventForm.get('eventAt')?.invalid && eventForm.get('eventAt')?.touched">
           <div *ngIf="eventForm.get('eventAt')?.invalid && eventForm.get('eventAt')?.touched" class="error-message">
-            Data e hora são obrigatórias e devem ser no futuro
+            <span *ngIf="eventForm.get('eventAt')?.errors?.['required']">Data e hora são obrigatórias</span>
+            <span *ngIf="eventForm.get('eventAt')?.errors?.['pastDate']">
+              Data e hora não podem estar no passado
+            </span>
           </div>
         </div>
         
@@ -168,10 +174,19 @@ export class EventFormComponent implements OnInit {
 
   ngOnInit(): void {
     this.eventForm = this.fb.group({
-      title: ['', [Validators.required, Validators.maxLength(100)]],
+      title: ['', [
+        Validators.required,
+        Validators.maxLength(100)
+      ]],
       description: ['', [Validators.maxLength(1000)]],
-      eventAt: ['', [Validators.required]],
-      location: ['', [Validators.required, Validators.maxLength(200)]]
+      eventAt: ['', [
+        Validators.required,
+        this.futureDateValidator
+      ]],
+      location: ['', [
+        Validators.required,
+        Validators.maxLength(200)
+      ]]
     });
 
     const id = this.route.snapshot.paramMap.get('id');
@@ -255,5 +270,27 @@ export class EventFormComponent implements OnInit {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
+
+  /**
+   * Validator para verificar se a data não está no passado.
+   */
+  private futureDateValidator = (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null; // Deixa o Validators.required tratar o valor vazio
+    }
+
+    const selectedDate = new Date(control.value);
+    const now = new Date();
+    
+    // Compara apenas data e hora (ignora milissegundos)
+    now.setMilliseconds(0);
+    selectedDate.setMilliseconds(0);
+
+    if (selectedDate < now) {
+      return { pastDate: true };
+    }
+
+    return null;
+  };
 }
 
