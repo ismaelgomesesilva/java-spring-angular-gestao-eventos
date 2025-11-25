@@ -60,7 +60,8 @@
               "buildTarget": "gestao-eventos:build:production"
             },
             "development": {
-              "buildTarget": "gestao-eventos:build:development"
+              "buildTarget": "gestao-eventos:build:development",
+              "proxyConfig": "proxy.conf.json"
             }
           },
           "defaultConfiguration": "development"
