@@ -5,6 +5,8 @@ import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { EventsService } from '../../services/events.service';
 import { Event } from '../../models/event.model';
 import { Page } from '../../models/page.model';
@@ -21,7 +23,9 @@ import { Page } from '../../models/page.model';
     MatPaginatorModule,
     MatCardModule,
     MatButtonModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatIconModule
   ],
   template: `
     <div class="events-container">
@@ -30,9 +34,22 @@ import { Page } from '../../models/page.model';
         <a routerLink="/events/new" mat-raised-button color="primary">Novo Evento</a>
       </div>
       
-      <mat-spinner *ngIf="loading" diameter="50" class="spinner"></mat-spinner>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="60" class="spinner"></mat-spinner>
+        <p class="loading-text">Carregando eventos...</p>
+      </div>
       
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="error-container">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <div class="error-content">
+          <h3>Erro ao carregar eventos</h3>
+          <p>{{ error }}</p>
+          <button mat-raised-button color="primary" (click)="loadEvents()" class="retry-button">
+            <mat-icon>refresh</mat-icon>
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
       
       <div *ngIf="!loading && !error && eventsPage">
         <div *ngIf="eventsPage.empty" class="empty">
@@ -82,16 +99,60 @@ import { Page } from '../../models/page.model';
       align-items: center;
       margin-bottom: 2rem;
     }
-    .spinner {
-      margin: 2rem auto;
-      display: block;
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
     }
-    .error, .empty {
+    .spinner {
+      margin: 0 auto;
+    }
+    .loading-text {
+      color: #666;
+      font-size: 1rem;
+      margin: 0;
+    }
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      background-color: #ffebee;
+      border-radius: 8px;
+      border: 1px solid #ffcdd2;
+      margin: 2rem 0;
+    }
+    .error-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: #f44336;
+      margin-bottom: 1rem;
+    }
+    .error-content {
+      text-align: center;
+    }
+    .error-content h3 {
+      color: #d32f2f;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+    }
+    .error-content p {
+      color: #666;
+      margin: 0 0 1.5rem 0;
+    }
+    .retry-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .empty {
       text-align: center;
       padding: 2rem;
-    }
-    .error {
-      color: #f44336;
     }
     .empty {
       display: flex;
@@ -132,7 +193,10 @@ export class EventsListComponent implements OnInit {
   currentPage = 0;
   pageSize = 10;
 
-  constructor(private eventsService: EventsService) { }
+  constructor(
+    private eventsService: EventsService,
+    private snackBar: MatSnackBar
+  ) { }
 
   ngOnInit(): void {
     this.loadEvents();
@@ -148,9 +212,30 @@ export class EventsListComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Erro ao carregar eventos. Tente novamente.';
+        let errorMessage = 'Erro ao carregar eventos. Verifique sua conexão e tente novamente.';
+        
+        if (err?.error?.message) {
+          errorMessage = err.error.message;
+        } else if (err?.message) {
+          errorMessage = err.message;
+        } else if (err?.status === 0 || err?.statusText === 'Unknown Error') {
+          errorMessage = 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.';
+        } else if (err?.status >= 500) {
+          errorMessage = 'Erro no servidor. Tente novamente mais tarde.';
+        } else if (err?.status >= 400) {
+          errorMessage = 'Erro na requisição. Verifique os dados e tente novamente.';
+        }
+        
+        this.error = errorMessage;
         console.error('Erro ao carregar eventos:', err);
         this.loading = false;
+        
+        this.snackBar.open(errorMessage, 'Fechar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }

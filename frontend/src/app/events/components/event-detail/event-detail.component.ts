@@ -1,6 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { EventsService } from '../../services/events.service';
 import { Event } from '../../models/event.model';
 
@@ -10,12 +14,36 @@ import { Event } from '../../models/event.model';
 @Component({
   selector: 'app-event-detail',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatIconModule,
+    MatButtonModule
+  ],
   template: `
     <div class="detail-container">
-      <div *ngIf="loading" class="loading">Carregando...</div>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="60"></mat-spinner>
+        <p class="loading-text">Carregando evento...</p>
+      </div>
       
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="error-container">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <div class="error-content">
+          <h3>Erro ao carregar evento</h3>
+          <p>{{ error }}</p>
+          <button mat-raised-button color="primary" (click)="reloadEvent()" *ngIf="event?.id" class="retry-button">
+            <mat-icon>refresh</mat-icon>
+            Tentar Novamente
+          </button>
+          <a mat-raised-button color="primary" routerLink="/events" class="retry-button">
+            <mat-icon>arrow_back</mat-icon>
+            Voltar para Lista
+          </a>
+        </div>
+      </div>
       
       <div *ngIf="!loading && !error && event" class="event-detail">
         <div class="header">
@@ -56,12 +84,54 @@ import { Event } from '../../models/event.model';
       max-width: 800px;
       margin: 0 auto;
     }
-    .loading, .error {
-      text-align: center;
-      padding: 2rem;
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
     }
-    .error {
+    .loading-text {
+      color: #666;
+      font-size: 1rem;
+      margin: 0;
+    }
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      background-color: #ffebee;
+      border-radius: 8px;
+      border: 1px solid #ffcdd2;
+      margin: 2rem 0;
+    }
+    .error-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
       color: #f44336;
+      margin-bottom: 1rem;
+    }
+    .error-content {
+      text-align: center;
+    }
+    .error-content h3 {
+      color: #d32f2f;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+    }
+    .error-content p {
+      color: #666;
+      margin: 0 0 1.5rem 0;
+    }
+    .retry-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin: 0.5rem;
     }
     .event-detail {
       background: white;
@@ -147,13 +217,23 @@ export class EventDetailComponent implements OnInit {
   constructor(
     private eventsService: EventsService,
     private route: ActivatedRoute,
-    private router: Router
+    private router: Router,
+    private snackBar: MatSnackBar
   ) { }
+
+  eventId: number | null = null;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
-      this.loadEvent(+id);
+      this.eventId = +id;
+      this.loadEvent(this.eventId);
+    }
+  }
+
+  reloadEvent(): void {
+    if (this.eventId) {
+      this.loadEvent(this.eventId);
     }
   }
 
@@ -167,9 +247,17 @@ export class EventDetailComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Erro ao carregar evento.';
+        const errorMessage = err?.error?.message || 'Erro ao carregar evento. Tente novamente.';
+        this.error = errorMessage;
         console.error('Erro ao carregar evento:', err);
         this.loading = false;
+        
+        this.snackBar.open(errorMessage, 'Fechar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
@@ -181,12 +269,27 @@ export class EventDetailComponent implements OnInit {
       this.loading = true;
       this.eventsService.delete(this.event.id).subscribe({
         next: () => {
+          this.snackBar.open('Evento excluído com sucesso!', 'Fechar', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['success-snackbar']
+          });
+          
           this.router.navigate(['/events']);
         },
         error: (err) => {
-          this.error = 'Erro ao excluir evento.';
+          const errorMessage = err?.error?.message || 'Erro ao excluir evento. Tente novamente.';
+          this.error = errorMessage;
           console.error('Erro ao excluir evento:', err);
           this.loading = false;
+          
+          this.snackBar.open(errorMessage, 'Fechar', {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'top',
+            panelClass: ['error-snackbar']
+          });
         }
       });
     }
