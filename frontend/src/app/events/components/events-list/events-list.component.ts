@@ -1,6 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
+import { MatCardModule } from '@angular/material/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { EventsService } from '../../services/events.service';
 import { Event } from '../../models/event.model';
 import { Page } from '../../models/page.model';
@@ -11,56 +17,74 @@ import { Page } from '../../models/page.model';
 @Component({
   selector: 'app-events-list',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule,
+    MatPaginatorModule,
+    MatCardModule,
+    MatButtonModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatIconModule
+  ],
   template: `
     <div class="events-container">
       <div class="header">
         <h2>Lista de Eventos</h2>
-        <a routerLink="/events/new" class="btn-primary">Novo Evento</a>
+        <a routerLink="/events/new" mat-raised-button color="primary">Novo Evento</a>
       </div>
       
-      <div *ngIf="loading" class="loading">Carregando...</div>
+      <div *ngIf="loading" class="loading-container">
+        <mat-spinner diameter="60" class="spinner"></mat-spinner>
+        <p class="loading-text">Carregando eventos...</p>
+      </div>
       
-      <div *ngIf="error" class="error">{{ error }}</div>
+      <div *ngIf="error" class="error-container">
+        <mat-icon class="error-icon">error_outline</mat-icon>
+        <div class="error-content">
+          <h3>Erro ao carregar eventos</h3>
+          <p>{{ error }}</p>
+          <button mat-raised-button color="primary" (click)="loadEvents()" class="retry-button">
+            <mat-icon>refresh</mat-icon>
+            Tentar Novamente
+          </button>
+        </div>
+      </div>
       
       <div *ngIf="!loading && !error && eventsPage">
         <div *ngIf="eventsPage.empty" class="empty">
-          Nenhum evento encontrado.
+          <p>Nenhum evento encontrado.</p>
+          <a routerLink="/events/new" mat-raised-button color="primary">Criar Primeiro Evento</a>
         </div>
         
         <div *ngIf="!eventsPage.empty" class="events-grid">
-          <div *ngFor="let event of eventsPage.content" class="event-card">
-            <h3>{{ event.title }}</h3>
-            <p *ngIf="event.description">{{ event.description }}</p>
-            <div class="event-info">
-              <span><strong>Data:</strong> {{ formatDate(event.eventAt) }}</span>
-              <span><strong>Local:</strong> {{ event.location }}</span>
-            </div>
-            <div class="actions">
-              <a [routerLink]="['/events', event.id]" class="btn-link">Ver Detalhes</a>
-              <a [routerLink]="['/events', event.id, 'edit']" class="btn-link">Editar</a>
-            </div>
-          </div>
+          <mat-card *ngFor="let event of eventsPage.content" class="event-card">
+            <mat-card-header>
+              <mat-card-title>{{ event.title }}</mat-card-title>
+            </mat-card-header>
+            <mat-card-content>
+              <p *ngIf="event.description" class="description">{{ event.description }}</p>
+              <div class="event-info">
+                <p><strong>Data:</strong> {{ formatDate(event.eventAt) }}</p>
+                <p><strong>Local:</strong> {{ event.location }}</p>
+              </div>
+            </mat-card-content>
+            <mat-card-actions>
+              <a [routerLink]="['/events', event.id]" mat-button color="primary">Ver Detalhes</a>
+              <a [routerLink]="['/events', event.id, 'edit']" mat-button>Editar</a>
+            </mat-card-actions>
+          </mat-card>
         </div>
         
-        <div *ngIf="!eventsPage.empty" class="pagination">
-          <button 
-            (click)="previousPage()" 
-            [disabled]="eventsPage.first"
-            class="btn">
-            Anterior
-          </button>
-          <span class="page-info">
-            Página {{ eventsPage.number + 1 }} de {{ eventsPage.totalPages }}
-            ({{ eventsPage.totalElements }} eventos)
-          </span>
-          <button 
-            (click)="nextPage()" 
-            [disabled]="eventsPage.last"
-            class="btn">
-            Próxima
-          </button>
-        </div>
+        <mat-paginator
+          *ngIf="!eventsPage.empty"
+          [length]="eventsPage.totalElements"
+          [pageSize]="pageSize"
+          [pageIndex]="currentPage"
+          [pageSizeOptions]="[5, 10, 20, 50]"
+          (page)="onPageChange($event)"
+          showFirstLastButtons>
+        </mat-paginator>
       </div>
     </div>
   `,
@@ -75,23 +99,66 @@ import { Page } from '../../models/page.model';
       align-items: center;
       margin-bottom: 2rem;
     }
-    .btn-primary {
-      background-color: #3f51b5;
-      color: white;
-      padding: 0.75rem 1.5rem;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: 500;
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4rem 2rem;
+      gap: 1rem;
     }
-    .btn-primary:hover {
-      background-color: #303f9f;
+    .spinner {
+      margin: 0 auto;
     }
-    .loading, .error, .empty {
+    .loading-text {
+      color: #666;
+      font-size: 1rem;
+      margin: 0;
+    }
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+      background-color: #ffebee;
+      border-radius: 8px;
+      border: 1px solid #ffcdd2;
+      margin: 2rem 0;
+    }
+    .error-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: #f44336;
+      margin-bottom: 1rem;
+    }
+    .error-content {
+      text-align: center;
+    }
+    .error-content h3 {
+      color: #d32f2f;
+      margin: 0 0 0.5rem 0;
+      font-size: 1.25rem;
+    }
+    .error-content p {
+      color: #666;
+      margin: 0 0 1.5rem 0;
+    }
+    .retry-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .empty {
       text-align: center;
       padding: 2rem;
     }
-    .error {
-      color: #f44336;
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
     }
     .events-grid {
       display: grid;
@@ -100,63 +167,22 @@ import { Page } from '../../models/page.model';
       margin-bottom: 2rem;
     }
     .event-card {
-      border: 1px solid #e0e0e0;
-      border-radius: 4px;
-      padding: 1.5rem;
-      background: white;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      height: 100%;
     }
-    .event-card h3 {
-      margin-top: 0;
-      color: #3f51b5;
+    .description {
+      margin: 1rem 0;
+      color: #666;
     }
     .event-info {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
       margin: 1rem 0;
       font-size: 0.9rem;
       color: #666;
     }
-    .actions {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
+    .event-info p {
+      margin: 0.5rem 0;
     }
-    .btn-link {
-      color: #3f51b5;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .btn-link:hover {
-      text-decoration: underline;
-    }
-    .pagination {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 1rem;
+    mat-paginator {
       margin-top: 2rem;
-    }
-    .btn {
-      padding: 0.5rem 1rem;
-      border: 1px solid #3f51b5;
-      background: white;
-      color: #3f51b5;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btn:hover:not(:disabled) {
-      background-color: #3f51b5;
-      color: white;
-    }
-    .btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .page-info {
-      font-size: 0.9rem;
-      color: #666;
     }
   `]
 })
@@ -167,7 +193,10 @@ export class EventsListComponent implements OnInit {
   currentPage = 0;
   pageSize = 10;
 
-  constructor(private eventsService: EventsService) { }
+  constructor(
+    private eventsService: EventsService,
+    private snackBar: MatSnackBar
+  ) { }
 
   ngOnInit(): void {
     this.loadEvents();
@@ -183,25 +212,38 @@ export class EventsListComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Erro ao carregar eventos. Tente novamente.';
+        let errorMessage = 'Erro ao carregar eventos. Verifique sua conexão e tente novamente.';
+        
+        if (err?.error?.message) {
+          errorMessage = err.error.message;
+        } else if (err?.message) {
+          errorMessage = err.message;
+        } else if (err?.status === 0 || err?.statusText === 'Unknown Error') {
+          errorMessage = 'Não foi possível conectar ao servidor. Verifique se o backend está rodando.';
+        } else if (err?.status >= 500) {
+          errorMessage = 'Erro no servidor. Tente novamente mais tarde.';
+        } else if (err?.status >= 400) {
+          errorMessage = 'Erro na requisição. Verifique os dados e tente novamente.';
+        }
+        
+        this.error = errorMessage;
         console.error('Erro ao carregar eventos:', err);
         this.loading = false;
+        
+        this.snackBar.open(errorMessage, 'Fechar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
 
-  nextPage(): void {
-    if (this.eventsPage && !this.eventsPage.last) {
-      this.currentPage++;
-      this.loadEvents();
-    }
-  }
-
-  previousPage(): void {
-    if (this.eventsPage && !this.eventsPage.first) {
-      this.currentPage--;
-      this.loadEvents();
-    }
+  onPageChange(event: PageEvent): void {
+    this.currentPage = event.pageIndex;
+    this.pageSize = event.pageSize;
+    this.loadEvents();
   }
 
   formatDate(dateString: string): string {

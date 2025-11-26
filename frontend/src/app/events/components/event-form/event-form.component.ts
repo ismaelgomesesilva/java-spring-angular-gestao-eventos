@@ -1,7 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
+import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl, ValidationErrors } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { EventsService } from '../../services/events.service';
 
 /**
@@ -10,12 +13,23 @@ import { EventsService } from '../../services/events.service';
 @Component({
   selector: 'app-event-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    MatProgressSpinnerModule,
+    MatSnackBarModule,
+    MatIconModule
+  ],
   template: `
     <div class="form-container">
       <h2>{{ isEditMode ? 'Editar Evento' : 'Novo Evento' }}</h2>
       
-      <form [formGroup]="eventForm" (ngSubmit)="onSubmit()">
+      <div *ngIf="loading" class="loading-overlay">
+        <mat-spinner diameter="60"></mat-spinner>
+        <p>Salvando evento...</p>
+      </div>
+      
+      <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" [class.form-loading]="loading">
         <div class="form-group">
           <label for="title">Título *</label>
           <input 
@@ -25,7 +39,10 @@ import { EventsService } from '../../services/events.service';
             class="form-control"
             [class.error]="eventForm.get('title')?.invalid && eventForm.get('title')?.touched">
           <div *ngIf="eventForm.get('title')?.invalid && eventForm.get('title')?.touched" class="error-message">
-            Título é obrigatório (máximo 100 caracteres)
+            <span *ngIf="eventForm.get('title')?.errors?.['required']">Título é obrigatório</span>
+            <span *ngIf="eventForm.get('title')?.errors?.['maxlength']">
+              Título não pode ter mais de 100 caracteres
+            </span>
           </div>
         </div>
         
@@ -52,7 +69,10 @@ import { EventsService } from '../../services/events.service';
             class="form-control"
             [class.error]="eventForm.get('eventAt')?.invalid && eventForm.get('eventAt')?.touched">
           <div *ngIf="eventForm.get('eventAt')?.invalid && eventForm.get('eventAt')?.touched" class="error-message">
-            Data e hora são obrigatórias e devem ser no futuro
+            <span *ngIf="eventForm.get('eventAt')?.errors?.['required']">Data e hora são obrigatórias</span>
+            <span *ngIf="eventForm.get('eventAt')?.errors?.['pastDate']">
+              Data e hora não podem estar no passado
+            </span>
           </div>
         </div>
         
@@ -69,12 +89,19 @@ import { EventsService } from '../../services/events.service';
           </div>
         </div>
         
-        <div *ngIf="error" class="error-message">{{ error }}</div>
+        <div *ngIf="error" class="error-alert">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ error }}</span>
+        </div>
         
         <div class="form-actions">
-          <button type="button" (click)="cancel()" class="btn btn-secondary">Cancelar</button>
+          <button type="button" (click)="cancel()" class="btn btn-secondary" [disabled]="loading">
+            Cancelar
+          </button>
           <button type="submit" [disabled]="eventForm.invalid || loading" class="btn btn-primary">
-            {{ loading ? 'Salvando...' : (isEditMode ? 'Atualizar' : 'Criar') }}
+            <mat-spinner *ngIf="loading" diameter="20" class="button-spinner"></mat-spinner>
+            <span *ngIf="!loading">{{ isEditMode ? 'Atualizar' : 'Criar' }}</span>
+            <span *ngIf="loading">{{ isEditMode ? 'Atualizando...' : 'Criando...' }}</span>
           </button>
         </div>
       </form>
@@ -88,6 +115,11 @@ import { EventsService } from '../../services/events.service';
       padding: 2rem;
       border-radius: 4px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      position: relative;
+    }
+    .form-loading {
+      opacity: 0.6;
+      pointer-events: none;
     }
     .form-group {
       margin-bottom: 1.5rem;
@@ -113,10 +145,45 @@ import { EventsService } from '../../services/events.service';
       border-color: #3f51b5;
       box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.2);
     }
-    .error-message {
+    .error-alert {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem;
+      background-color: #ffebee;
+      border: 1px solid #ffcdd2;
+      border-radius: 4px;
+      color: #d32f2f;
+      margin-bottom: 1rem;
+    }
+    .error-alert mat-icon {
       color: #f44336;
-      font-size: 0.875rem;
-      margin-top: 0.25rem;
+    }
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(255, 255, 255, 0.95);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      border-radius: 4px;
+      z-index: 1000;
+      backdrop-filter: blur(2px);
+    }
+    .loading-overlay p {
+      margin: 0;
+      color: #3f51b5;
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+    .button-spinner {
+      display: inline-block;
+      margin-right: 0.5rem;
     }
     .form-actions {
       display: flex;
@@ -163,15 +230,25 @@ export class EventFormComponent implements OnInit {
     private fb: FormBuilder,
     private eventsService: EventsService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private snackBar: MatSnackBar
   ) { }
 
   ngOnInit(): void {
     this.eventForm = this.fb.group({
-      title: ['', [Validators.required, Validators.maxLength(100)]],
+      title: ['', [
+        Validators.required,
+        Validators.maxLength(100)
+      ]],
       description: ['', [Validators.maxLength(1000)]],
-      eventAt: ['', [Validators.required]],
-      location: ['', [Validators.required, Validators.maxLength(200)]]
+      eventAt: ['', [
+        Validators.required,
+        this.futureDateValidator
+      ]],
+      location: ['', [
+        Validators.required,
+        Validators.maxLength(200)
+      ]]
     });
 
     const id = this.route.snapshot.paramMap.get('id');
@@ -201,9 +278,17 @@ export class EventFormComponent implements OnInit {
         this.loading = false;
       },
       error: (err) => {
-        this.error = 'Erro ao carregar evento.';
+        const errorMessage = err?.error?.message || 'Erro ao carregar evento. Tente novamente.';
+        this.error = errorMessage;
         console.error('Erro ao carregar evento:', err);
         this.loading = false;
+        
+        this.snackBar.open(errorMessage, 'Fechar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
@@ -233,12 +318,31 @@ export class EventFormComponent implements OnInit {
 
     operation.subscribe({
       next: () => {
+        const successMessage = this.isEditMode 
+          ? 'Evento atualizado com sucesso!' 
+          : 'Evento criado com sucesso!';
+        
+        this.snackBar.open(successMessage, 'Fechar', {
+          duration: 3000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['success-snackbar']
+        });
+        
         this.router.navigate(['/events']);
       },
       error: (err) => {
-        this.error = 'Erro ao salvar evento. Tente novamente.';
+        const errorMessage = err?.error?.message || 'Erro ao salvar evento. Verifique os dados e tente novamente.';
+        this.error = errorMessage;
         console.error('Erro ao salvar evento:', err);
         this.loading = false;
+        
+        this.snackBar.open(errorMessage, 'Fechar', {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+          panelClass: ['error-snackbar']
+        });
       }
     });
   }
@@ -255,5 +359,27 @@ export class EventFormComponent implements OnInit {
     const minutes = String(date.getMinutes()).padStart(2, '0');
     return `${year}-${month}-${day}T${hours}:${minutes}`;
   }
+
+  /**
+   * Validator para verificar se a data não está no passado.
+   */
+  private futureDateValidator = (control: AbstractControl): ValidationErrors | null => {
+    if (!control.value) {
+      return null; // Deixa o Validators.required tratar o valor vazio
+    }
+
+    const selectedDate = new Date(control.value);
+    const now = new Date();
+    
+    // Compara apenas data e hora (ignora milissegundos)
+    now.setMilliseconds(0);
+    selectedDate.setMilliseconds(0);
+
+    if (selectedDate < now) {
+      return { pastDate: true };
+    }
+
+    return null;
+  };
 }
 
