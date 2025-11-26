@@ -1,19 +1,19 @@
 # Multi-stage build para Angular
 # Stage 1: Build da aplicação Angular
-FROM node:18-alpine AS build
+FROM node:18 AS build
 
 WORKDIR /app
 
 # Copia arquivos de dependências primeiro (cache layer)
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 
 # Copia o código fonte e faz o build
 COPY . .
-RUN npm run build -- --configuration production
+RUN npx ng build --configuration production
 
 # Stage 2: Servir com Nginx
-FROM nginx:1.25-alpine
+FROM nginx:alpine
 
 # Remove configuração padrão do Nginx
 RUN rm -rf /etc/nginx/conf.d/default.conf
